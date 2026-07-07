@@ -340,7 +340,7 @@ static void print_prompt(void) {
 
 static void handle_command(char *cmd) {
     if (strcmp(cmd, "help") == 0) {
-        puts("commands: help clear doom about ls echo\n");
+        puts("commands: help clear doom about ls echo pwd whoami uname cat reboot shutdown\n");
     } else if (strcmp(cmd, "clear") == 0) {
         clear_screen();
     } else if (strcmp(cmd, "doom") == 0) {
@@ -356,6 +356,26 @@ static void handle_command(char *cmd) {
         puts("\n");
     } else if (strcmp(cmd, "echo") == 0) {
         puts("\n");
+    } else if (strcmp(cmd, "pwd") == 0) {
+        puts("/root\n");
+    } else if (strcmp(cmd, "whoami") == 0) {
+        puts("root\n");
+    } else if (strcmp(cmd, "uname") == 0) {
+        puts("HoloOS (x86_32)\n");
+    } else if (strncmp(cmd, "cat ", 4) == 0) {
+        puts("cat: ");
+        puts(cmd + 4);
+        puts(": No filesystem loaded\n");
+    } else if (strcmp(cmd, "cat") == 0) {
+        puts("Usage: cat <file>\n");
+    } else if (strcmp(cmd, "reboot") == 0) {
+        puts("Rebooting...\n");
+        outb(0x64, 0xFE);
+    } else if (strcmp(cmd, "shutdown") == 0) {
+        puts("Shutting down...\n");
+        outb(0xf4, 0x00);
+        outb(0x604, 0x2000);
+        __asm__ volatile("cli; hlt");
     } else {
         puts("unknown command\n");
     }

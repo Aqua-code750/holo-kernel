@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
         size_t L = strlen(line);
         if (L && line[L-1] == '\n') line[L-1] = '\0';
         if (strcmp(line, "help") == 0) {
-            printf("commands: help clear doom [path] ls echo [text] about exit\n");
+            printf("commands: help clear doom [path] ls echo [text] pwd whoami uname cat reboot shutdown about exit\n");
         } else if (strcmp(line, "clear") == 0) {
             clear_screen();
         } else if (strncmp(line, "doom", 4) == 0) {
@@ -81,6 +81,19 @@ int main(int argc, char **argv) {
             printf("%s\n", line + 5);
         } else if (strcmp(line, "echo") == 0) {
             printf("\n");
+        } else if (strcmp(line, "pwd") == 0) {
+            printf("/root\n");
+        } else if (strcmp(line, "whoami") == 0) {
+            printf("root\n");
+        } else if (strcmp(line, "uname") == 0) {
+            printf("HoloOS (x86_32)\n");
+        } else if (strncmp(line, "cat ", 4) == 0) {
+            printf("cat: %s: No filesystem loaded\n", line + 4);
+        } else if (strcmp(line, "cat") == 0) {
+            printf("Usage: cat <file>\n");
+        } else if (strcmp(line, "reboot") == 0 || strcmp(line, "shutdown") == 0) {
+            printf("System would reboot/shutdown here.\n");
+            break;
         } else if (strcmp(line, "exit") == 0) {
             break;
         } else if (strcmp(line, "") == 0) {
