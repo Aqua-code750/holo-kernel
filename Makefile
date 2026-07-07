@@ -28,7 +28,7 @@ build/holokernel.iso: build/holokernel.bin grub.cfg
 	grub-mkrescue -o $@ build/iso > /dev/null 2>&1
 
 run: build/holokernel.iso
-	qemu-system-i386 -cdrom build/holokernel.iso -serial stdio
+	qemu-system-x86_64 -cdrom build/holokernel.iso -serial stdio
 
 clean:
 	rm -rf build
