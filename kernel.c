@@ -115,6 +115,12 @@ static int strcmp(const char *a, const char *b) {
     return (*a > *b) - (*a < *b);
 }
 
+static int strncmp(const char *a, const char *b, int n) {
+    while (n && *a && *b && *a == *b) { ++a; ++b; --n; }
+    if (n == 0) return 0;
+    return (*a > *b) - (*a < *b);
+}
+
 static int strlen(const char *s) {
     int len = 0;
     while (s[len]) ++len;
@@ -129,7 +135,7 @@ static void strcpy(char *dst, const char *src) {
 static void scroll(void) {
     for (int y = 1; y < VGA_HEIGHT; ++y) {
         for (int x = 0; x < VGA_WIDTH; ++x) {
-            video[y * VGA_WIDTH + x] = video[(y + 1) * VGA_WIDTH + x];
+            video[(y - 1) * VGA_WIDTH + x] = video[y * VGA_WIDTH + x];
         }
     }
     for (int x = 0; x < VGA_WIDTH; ++x) {
@@ -330,8 +336,10 @@ static void handle_command(char *cmd) {
         puts("HoloKernel v0.1 - bootable shell with Doom WAD support\n");
     } else if (strcmp(cmd, "ls") == 0) {
         puts("boot/ kernel/ doom.wad\n");
-    } else if (strcmp(cmd, "echo") == 0) {
+    } else if (strncmp(cmd, "echo ", 5) == 0) {
         puts(cmd + 5);
+        puts("\n");
+    } else if (strcmp(cmd, "echo") == 0) {
         puts("\n");
     } else {
         puts("unknown command\n");
@@ -363,11 +371,15 @@ static void shell_loop(void) {
                 continue;
             }
             if (c == '\n') {
+                putchar('\n');
                 command_buffer[command_len] = 0;
                 break;
             }
-            if (c == '\b' && command_len > 0) {
-                command_len--;
+            if (c == '\b') {
+                if (command_len > 0) {
+                    command_len--;
+                    putchar('\b');
+                }
                 continue;
             }
             if (command_len < 127) {

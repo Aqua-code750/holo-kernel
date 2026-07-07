@@ -75,10 +75,12 @@ int main(int argc, char **argv) {
             run_doom(arg);
         } else if (strcmp(line, "about") == 0) {
             printf("HoloKernel user-shell prototype. Detects IWAD files and can launch Chocolate Doom if installed.\n");
-        } else if (strncmp(line, "ls", 2) == 0) {
+        } else if (strcmp(line, "ls") == 0 || strncmp(line, "ls ", 3) == 0) {
             list_dir(cwd);
         } else if (strncmp(line, "echo ", 5) == 0) {
             printf("%s\n", line + 5);
+        } else if (strcmp(line, "echo") == 0) {
+            printf("\n");
         } else if (strcmp(line, "exit") == 0) {
             break;
         } else if (strcmp(line, "") == 0) {

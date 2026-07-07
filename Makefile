@@ -8,12 +8,6 @@ all: build/holokernel.bin build/holokernel.iso
 build:
 	mkdir -p build
 
-build/holokernel.bin: build boot.o kernel.o interrupts.o
-	ld $(LDFLAGS) -o $@ $^
-
-build:
-	mkdir -p build
-
 boot.o: boot.S
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -22,6 +16,10 @@ kernel.o: kernel.c
 
 interrupts.o: interrupts.S
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# Ensure build directory exists (order-only) and link with compiler driver
+build/holokernel.bin: boot.o kernel.o interrupts.o | build
+	$(CC) $(LDFLAGS) -o $@ $^
 
 build/holokernel.iso: build/holokernel.bin grub.cfg
 	mkdir -p build/iso/boot/grub

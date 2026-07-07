@@ -122,10 +122,4 @@ irq_common_stub:
     pop %ds
     popa
     add $8, %esp
-    movb $0x20, %al
-    outb %al, $0x20
-    cmpb $8, 0(%esp)
-    jne 1f
-    outb %al, $0xA0
-1:
     iret
