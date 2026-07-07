@@ -36,9 +36,9 @@ static int cursor_x = 0;
 static int cursor_y = 0;
 static char command_buffer[128];
 static int command_len = 0;
-static char keyboard_buffer[128];
-static int keyboard_len = 0;
-static int shift_pressed = 0;
+static volatile char keyboard_buffer[128];
+static volatile int keyboard_len = 0;
+static volatile int shift_pressed = 0;
 static idt_entry_t idt[256];
 static idt_ptr_t idt_ptr;
 
@@ -322,11 +322,16 @@ static void keyboard_handler(void) {
 }
 
 static int keyboard_read(char *out) {
-    if (keyboard_len == 0) return 0;
-    *out = keyboard_buffer[0];
-    for (int i = 1; i < keyboard_len; ++i) keyboard_buffer[i - 1] = keyboard_buffer[i];
-    keyboard_len--;
-    return 1;
+    int ret = 0;
+    __asm__ volatile("cli");
+    if (keyboard_len > 0) {
+        *out = keyboard_buffer[0];
+        for (int i = 1; i < keyboard_len; ++i) keyboard_buffer[i - 1] = keyboard_buffer[i];
+        keyboard_len--;
+        ret = 1;
+    }
+    __asm__ volatile("sti");
+    return ret;
 }
 
 static void print_prompt(void) {
