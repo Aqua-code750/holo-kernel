@@ -430,13 +430,19 @@ static void shell_loop(void) {
     }
 }
 
+#include "gdt.h"
+#include "pmm.h"
+#include "vmm.h"
+
 void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     (void)magic;
-    (void)multiboot_info;
     clear_screen();
     puts("HoloKernel -- booted with a Doom WAD shell\n");
-    puts("Preparing keyboard and shell...\n");
+    puts("Preparing hardware and subsystems...\n");
+    gdt_init();
     idt_init();
+    pmm_init((multiboot_info_t*)multiboot_info);
+    vmm_init();
     pic_remap();
     __asm__ volatile("sti");
     shell_loop();

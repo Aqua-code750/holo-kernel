@@ -17,8 +17,20 @@ kernel.o: kernel.c
 interrupts.o: interrupts.S
 	$(CC) $(CFLAGS) -c $< -o $@
 
+gdt.o: gdt.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+gdt_flush.o: gdt_flush.S
+	$(CC) $(CFLAGS) -c $< -o $@
+
+pmm.o: pmm.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+vmm.o: vmm.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 # Ensure build directory exists (order-only) and link with compiler driver
-build/holokernel.bin: boot.o kernel.o interrupts.o | build
+build/holokernel.bin: boot.o kernel.o interrupts.o gdt.o gdt_flush.o pmm.o vmm.o | build
 	$(CC) $(LDFLAGS) -o $@ $^
 
 build/holokernel.iso: build/holokernel.bin grub.cfg
