@@ -143,6 +143,14 @@ static void scroll(void) {
     }
 }
 
+static void update_cursor(int x, int y) {
+    uint16_t pos = y * VGA_WIDTH + x;
+    outb(0x3D4, 0x0F);
+    outb(0x3D5, (uint8_t) (pos & 0xFF));
+    outb(0x3D4, 0x0E);
+    outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+}
+
 static void putchar(char c) {
     if (c == '\n') {
         cursor_x = 0;
@@ -164,6 +172,7 @@ static void putchar(char c) {
         scroll();
         cursor_y = VGA_HEIGHT - 1;
     }
+    update_cursor(cursor_x, cursor_y);
 }
 
 static void puts(const char *s) {
@@ -174,6 +183,7 @@ static void clear_screen(void) {
     for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; ++i) video[i] = 0x0720;
     cursor_x = 0;
     cursor_y = 0;
+    update_cursor(cursor_x, cursor_y);
 }
 
 static void set_idt_gate(int index, uint32_t base, uint16_t selector, uint8_t flags) {
