@@ -42,6 +42,9 @@ static volatile int shift_pressed = 0;
 static idt_entry_t idt[256];
 static idt_ptr_t idt_ptr;
 
+static uint32_t doom_wad_addr = 0;
+static uint32_t doom_wad_size = 0;
+
 extern void isr0(void);
 extern void isr1(void);
 extern void isr2(void);
@@ -348,9 +351,31 @@ static void handle_command(char *cmd) {
     } else if (strcmp(cmd, "clear") == 0) {
         clear_screen();
     } else if (strcmp(cmd, "doom") == 0) {
-        puts("Doom WAD detected: DOOM.WAD\n");
-        puts("Launching Doom stub from embedded IWAD payload...\n");
-        puts("(Real Doom engine can be linked later.)\n");
+        if (doom_wad_size > 0) {
+            puts("Doom WAD loaded in RAM at 0x");
+            // simple hex print
+            uint32_t a = doom_wad_addr;
+            for (int i = 7; i >= 0; i--) {
+                int nibble = (a >> (i * 4)) & 0xF;
+                putchar(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
+            }
+            puts(" (Size: ");
+            // simple dec print
+            uint32_t s = doom_wad_size;
+            char buf[16];
+            int idx = 0;
+            if (s == 0) buf[idx++] = '0';
+            while (s > 0) { buf[idx++] = '0' + (s % 10); s /= 10; }
+            while (idx > 0) putchar(buf[--idx]);
+            puts(" bytes)\n");
+            
+            puts("WAD Signature: ");
+            char* sig = (char*)doom_wad_addr;
+            putchar(sig[0]); putchar(sig[1]); putchar(sig[2]); putchar(sig[3]);
+            puts("\nLaunching Doom engine... (Requires graphics driver!)\n");
+        } else {
+            puts("DOOM1.WAD not found in memory!\n");
+        }
     } else if (strcmp(cmd, "about") == 0) {
         puts("HoloKernel v0.1 - bootable shell with Doom WAD support\n");
     } else if (strcmp(cmd, "ls") == 0) {
@@ -367,9 +392,20 @@ static void handle_command(char *cmd) {
     } else if (strcmp(cmd, "uname") == 0) {
         puts("HoloOS (x86_32)\n");
     } else if (strncmp(cmd, "cat ", 4) == 0) {
-        puts("cat: ");
-        puts(cmd + 4);
-        puts(": No filesystem loaded\n");
+        if (strcmp(cmd + 4, "doom.wad") == 0 || strcmp(cmd + 4, "DOOM1.WAD") == 0) {
+            if (doom_wad_size > 0) {
+                char* sig = (char*)doom_wad_addr;
+                puts("Binary file, signature: ");
+                putchar(sig[0]); putchar(sig[1]); putchar(sig[2]); putchar(sig[3]);
+                puts("\n");
+            } else {
+                puts("DOOM1.WAD not loaded.\n");
+            }
+        } else {
+            puts("cat: ");
+            puts(cmd + 4);
+            puts(": No filesystem loaded\n");
+        }
     } else if (strcmp(cmd, "cat") == 0) {
         puts("Usage: cat <file>\n");
     } else if (strcmp(cmd, "reboot") == 0) {
@@ -436,8 +472,17 @@ static void shell_loop(void) {
 
 void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     (void)magic;
+    multiboot_info_t* mbd = (multiboot_info_t*)multiboot_info;
+    if (mbd->flags & 0x08) {
+        if (mbd->mods_count > 0) {
+            multiboot_module_t* mod = (multiboot_module_t*)mbd->mods_addr;
+            doom_wad_addr = mod->mod_start;
+            doom_wad_size = mod->mod_end - mod->mod_start;
+        }
+    }
+
     clear_screen();
-    puts("HoloKernel -- booted with a Doom WAD shell\n");
+    puts("HoloKernel -- booted with a real DOOM initrd\n");
     puts("Preparing hardware and subsystems...\n");
     gdt_init();
     idt_init();

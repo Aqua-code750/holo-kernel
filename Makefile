@@ -33,11 +33,15 @@ vmm.o: vmm.c
 build/holokernel.bin: boot.o kernel.o interrupts.o gdt.o gdt_flush.o pmm.o vmm.o | build
 	$(CC) $(LDFLAGS) -o $@ $^
 
-build/holokernel.iso: build/holokernel.bin grub.cfg
+DOOM1.WAD:
+	curl -k -L -o DOOM1.WAD "https://distro.ibiblio.org/slitaz/sources/packages/d/doom1.wad"
+
+build/holokernel.iso: build/holokernel.bin grub.cfg DOOM1.WAD
 	mkdir -p build/iso/boot/grub
 	cp build/holokernel.bin build/iso/boot/holokernel.bin
+	cp DOOM1.WAD build/iso/boot/DOOM1.WAD
 	cp grub.cfg build/iso/boot/grub/grub.cfg
-	grub-mkrescue -o $@ build/iso > /dev/null 2>&1
+	grub-mkrescue -o build/holokernel.iso build/iso > /dev/null 2>&1
 
 run: build/holokernel.iso
 	qemu-system-x86_64 -cdrom build/holokernel.iso -serial stdio
