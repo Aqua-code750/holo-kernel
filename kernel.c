@@ -95,6 +95,10 @@ static void outb(uint16_t port, uint8_t value) {
     __asm__ volatile("outb %0, %1" : : "a"(value), "Nd"(port));
 }
 
+static void outw(uint16_t port, uint16_t value) {
+    __asm__ volatile("outw %0, %1" : : "a"(value), "Nd"(port));
+}
+
 static uint8_t inb(uint16_t port) {
     uint8_t value;
     __asm__ volatile("inb %1, %0" : "=a"(value) : "Nd"(port));
@@ -374,7 +378,7 @@ static void handle_command(char *cmd) {
     } else if (strcmp(cmd, "shutdown") == 0) {
         puts("Shutting down...\n");
         outb(0xf4, 0x00);
-        outb(0x604, 0x2000);
+        outw(0x604, 0x2000);
         __asm__ volatile("cli; hlt");
     } else {
         puts("unknown command\n");
