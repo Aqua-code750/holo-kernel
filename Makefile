@@ -1,7 +1,7 @@
 CC ?= gcc
 CFLAGS ?= -m32 -ffreestanding -fno-pie -fno-stack-protector -fno-builtin -nostdlib -O2 -Wall -Wextra
 AS ?= nasm
-LDFLAGS ?= -nostdlib -static -T linker.ld -no-pie
+LDFLAGS ?= -m32 -nostdlib -static -T linker.ld -no-pie
 
 all: build/holokernel.bin build/holokernel.iso
 
