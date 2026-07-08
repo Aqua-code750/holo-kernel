@@ -147,14 +147,6 @@ static void sleep_ms(uint32_t ms) {
     }
 }
 
-static void print_hex(uint32_t num) {
-    puts("0x");
-    for (int i = 7; i >= 0; i--) {
-        int nibble = (num >> (i * 4)) & 0xF;
-        putchar(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
-    }
-}
-
 static void scroll(void) {
     for (int y = 1; y < VGA_HEIGHT; ++y) {
         for (int x = 0; x < VGA_WIDTH; ++x) {
@@ -200,6 +192,14 @@ static void putchar(char c) {
 
 static void puts(const char *s) {
     while (*s) putchar(*s++);
+}
+
+static void print_hex(uint32_t num) {
+    puts("0x");
+    for (int i = 7; i >= 0; i--) {
+        int nibble = (num >> (i * 4)) & 0xF;
+        putchar(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
+    }
 }
 
 static void clear_screen(void) {
