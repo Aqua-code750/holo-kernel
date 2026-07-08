@@ -147,6 +147,14 @@ static void sleep_ms(uint32_t ms) {
     }
 }
 
+static void print_hex(uint32_t num) {
+    puts("0x");
+    for (int i = 7; i >= 0; i--) {
+        int nibble = (num >> (i * 4)) & 0xF;
+        putchar(nibble < 10 ? '0' + nibble : 'A' + nibble - 10);
+    }
+}
+
 static void scroll(void) {
     for (int y = 1; y < VGA_HEIGHT; ++y) {
         for (int x = 0; x < VGA_WIDTH; ++x) {
@@ -494,6 +502,19 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     sleep_ms(100);
     puts("[    0.000000] BIOS-provided physical RAM map:\n");
     sleep_ms(100);
+    
+    // DEBUG PRINTS
+    puts("[    0.000000] MULTIBOOT DEBUG - Flags: ");
+    print_hex(mbd->flags);
+    puts(" Mods Count: ");
+    print_hex(mbd->mods_count);
+    puts("\n");
+    
+    puts("[    0.000000] MULTIBOOT DEBUG - WAD Addr: ");
+    print_hex(doom_wad_addr);
+    puts(" WAD Size: ");
+    print_hex(doom_wad_size);
+    puts("\n");
     puts("[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable\n");
     puts("[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x0000000007ffffff] usable\n");
     sleep_ms(200);
