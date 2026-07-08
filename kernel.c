@@ -31,9 +31,18 @@ typedef struct {
     uint16_t high_offset;
 } __attribute__((packed)) idt_entry_t;
 
-static volatile uint16_t *video = (uint16_t *)VGA_MEMORY;
+static uint32_t* fb = 0;
+static uint32_t fb_width = 0;
+static uint32_t fb_height = 0;
+static uint32_t fb_pitch = 0;
+static uint8_t fb_bpp = 0;
+
+static int VGA_WIDTH = 0;
+static int VGA_HEIGHT = 0;
 static int cursor_x = 0;
 static int cursor_y = 0;
+static uint32_t current_color = 0x00AAAAAA; // Light Gray
+
 static char command_buffer[128];
 static int command_len = 0;
 static volatile char keyboard_buffer[128];
@@ -159,48 +168,99 @@ static void sleep_ms(uint32_t ms) {
     }
 }
 
-static void scroll(void) {
-    for (int y = 1; y < VGA_HEIGHT; ++y) {
-        for (int x = 0; x < VGA_WIDTH; ++x) {
-            video[(y - 1) * VGA_WIDTH + x] = video[y * VGA_WIDTH + x];
-        }
-    }
-    for (int x = 0; x < VGA_WIDTH; ++x) {
-        video[(VGA_HEIGHT - 1) * VGA_WIDTH + x] = 0x0720;
+static void draw_pixel(uint32_t x, uint32_t y, uint32_t color) {
+    if (!fb || x >= fb_width || y >= fb_height) return;
+    
+    if (fb_bpp == 32) {
+        uint32_t* pixel = (uint32_t*)((uint8_t*)fb + y * fb_pitch + x * 4);
+        *pixel = color;
     }
 }
 
-static void update_cursor(int x, int y) {
-    uint16_t pos = y * VGA_WIDTH + x;
-    outb(0x3D4, 0x0F);
-    outb(0x3D5, (uint8_t) (pos & 0xFF));
-    outb(0x3D4, 0x0E);
-    outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+static void draw_char(uint32_t x, uint32_t y, char c, uint32_t color) {
+    if (c < 0 || c > 127) c = '?';
+    char* bitmap = font8x8_basic[(int)c];
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            if (bitmap[row] & (1 << col)) {
+                draw_pixel(x + col, y + row, color);
+            } else {
+                draw_pixel(x + col, y + row, 0x00000000); // Black background
+            }
+        }
+    }
+}
+
+static void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
+    for (uint32_t i = 0; i < h; i++) {
+        for (uint32_t j = 0; j < w; j++) {
+            draw_pixel(x + j, y + i, color);
+        }
+    }
+}
+
+static void scroll(void) {
+    if (!fb) return;
+    // Move all pixels up by 8 rows
+    uint32_t row_bytes = fb_pitch;
+    uint32_t scroll_bytes = (fb_height - 8) * row_bytes;
+    
+    uint8_t* dst = (uint8_t*)fb;
+    uint8_t* src = (uint8_t*)fb + 8 * row_bytes;
+    
+    // Copy memory up (we don't have memmove, so do it manually)
+    for (uint32_t i = 0; i < scroll_bytes; i++) {
+        dst[i] = src[i];
+    }
+    
+    // Clear bottom 8 rows
+    for (uint32_t i = scroll_bytes; i < fb_height * row_bytes; i++) {
+        dst[i] = 0;
+    }
+}
+
+static void update_cursor(void) {
+    // We can't use hardware cursor, just draw a block cursor at the current position
+    // First, clear the cursor area from the previous draw (wait, it might overwrite text? 
+    // Actually, when a character is typed, it overwrites the cursor).
 }
 
 static void putchar(char c) {
     outb(0x3F8, c); // Write to serial port for headless debugging
+    
     if (c == '\n') {
+        // Clear old cursor block
+        draw_rect(cursor_x * 8, cursor_y * 8, 8, 8, 0x00000000);
         cursor_x = 0;
         cursor_y++;
-    } else if (c == '\r') {
-        cursor_x = 0;
     } else if (c == '\b') {
-        if (cursor_x > 0) cursor_x--;
-        video[cursor_y * VGA_WIDTH + cursor_x] = 0x0720;
+        if (cursor_x > 0) {
+            // Clear current cursor block
+            draw_rect(cursor_x * 8, cursor_y * 8, 8, 8, 0x00000000);
+            cursor_x--;
+            draw_char(cursor_x * 8, cursor_y * 8, ' ', current_color);
+        } else if (cursor_y > 0) {
+            draw_rect(cursor_x * 8, cursor_y * 8, 8, 8, 0x00000000);
+            cursor_y--;
+            cursor_x = VGA_WIDTH - 1;
+            draw_char(cursor_x * 8, cursor_y * 8, ' ', current_color);
+        }
     } else {
-        video[cursor_y * VGA_WIDTH + cursor_x] = 0x0F00 | (unsigned char)c;
+        draw_char(cursor_x * 8, cursor_y * 8, c, current_color);
         cursor_x++;
+        if (cursor_x >= VGA_WIDTH) {
+            cursor_x = 0;
+            cursor_y++;
+        }
     }
-    if (cursor_x >= VGA_WIDTH) {
-        cursor_x = 0;
-        cursor_y++;
-    }
+
     if (cursor_y >= VGA_HEIGHT) {
         scroll();
         cursor_y = VGA_HEIGHT - 1;
     }
-    update_cursor(cursor_x, cursor_y);
+    
+    // Draw new cursor block
+    draw_rect(cursor_x * 8, cursor_y * 8, 8, 8, 0x00555555); // Dark Gray cursor
 }
 
 static void puts(const char *s) {
@@ -216,10 +276,13 @@ static void print_hex(uint32_t num) {
 }
 
 static void clear_screen(void) {
-    for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; ++i) video[i] = 0x0720;
+    if (fb) {
+        for (uint32_t i = 0; i < fb_height * fb_pitch; i++) {
+            ((uint8_t*)fb)[i] = 0;
+        }
+    }
     cursor_x = 0;
     cursor_y = 0;
-    update_cursor(cursor_x, cursor_y);
 }
 
 static void set_idt_gate(int index, uint32_t base, uint16_t selector, uint8_t flags) {
@@ -511,6 +574,23 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     
     mb_flags = mbd->flags;
     mb_mods_count = mbd->mods_count;
+
+    // Check for Framebuffer Info (bit 12)
+    if (mbd->flags & (1 << 12)) {
+        fb = (uint32_t*)(uint32_t)mbd->framebuffer_addr;
+        fb_width = mbd->framebuffer_width;
+        fb_height = mbd->framebuffer_height;
+        fb_pitch = mbd->framebuffer_pitch;
+        fb_bpp = mbd->framebuffer_bpp;
+        
+        VGA_WIDTH = fb_width / 8;
+        VGA_HEIGHT = fb_height / 8;
+        
+        // Since the framebuffer physical address could be anywhere (like 0xFD000000),
+        // we can't reliably access it until paging is initialized to map it!
+        // But for right now, paging is off. So we can clear it physically!
+        clear_screen();
+    }
 
     if (mbd->flags & 0x08) {
         if (mbd->mods_count > 0) {

@@ -1,4 +1,5 @@
 #include "vmm.h"
+#include "pmm.h"
 
 // Note: In a real kernel, memset is in a string library.
 // We'll declare a simple one here.
@@ -8,6 +9,7 @@ static void vmm_memset(void *ptr, int value, int size) {
 }
 
 static pdirectory* current_pd = 0;
+extern uint32_t* fb;
 
 void vmm_init(void) {
     // 1. Allocate page directory
@@ -28,6 +30,25 @@ void vmm_init(void) {
 
         pd_entry table = (uint32_t)pt | I86_PTE_PRESENT | I86_PTE_WRITABLE;
         pd->m_entries[t] = table;
+    }
+    
+    // Map the Framebuffer if it exists (map 16MB)
+    if (fb) {
+        uint32_t fb_phys = (uint32_t)fb;
+        uint32_t fb_pd_idx = fb_phys / 0x400000;
+        
+        for (int t = 0; t < 4; t++) {
+            ptable* pt = (ptable*)pmm_alloc_frame();
+            if (!pt) return;
+            vmm_memset(pt, 0, sizeof(ptable));
+            
+            for (int i = 0; i < 1024; i++) {
+                pt_entry page = (fb_phys + t * 0x400000 + i * 4096) | I86_PTE_PRESENT | I86_PTE_WRITABLE;
+                pt->m_entries[i] = page;
+            }
+            pd_entry table = (uint32_t)pt | I86_PTE_PRESENT | I86_PTE_WRITABLE;
+            pd->m_entries[fb_pd_idx + t] = table;
+        }
     }
 
     current_pd = pd;
