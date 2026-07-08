@@ -1,8 +1,5 @@
 #include <stdint.h>
 
-#define VGA_WIDTH 80
-#define VGA_HEIGHT 25
-#define VGA_MEMORY 0xB8000
 #define PIC1_COMMAND 0x20
 #define PIC1_DATA 0x21
 #define PIC2_COMMAND 0xA0
@@ -10,6 +7,8 @@
 #define PIC_EOI 0x20
 #define KBD_DATA_PORT 0x60
 #define KBD_STATUS_PORT 0x64
+
+#include "font8x8_basic.h"
 
 struct regs {
     uint32_t gs, fs, es, ds;
@@ -139,16 +138,7 @@ static int strncmp(const char *a, const char *b, int n) {
     return (*a > *b) - (*a < *b);
 }
 
-static int strlen(const char *s) {
-    int len = 0;
-    while (s[len]) ++len;
-    return len;
-}
 
-static void strcpy(char *dst, const char *src) {
-    while (*src) *dst++ = *src++;
-    *dst = 0;
-}
 
 static void init_serial() {
     outb(0x3F8 + 1, 0x00);
@@ -219,11 +209,7 @@ static void scroll(void) {
     }
 }
 
-static void update_cursor(void) {
-    // We can't use hardware cursor, just draw a block cursor at the current position
-    // First, clear the cursor area from the previous draw (wait, it might overwrite text? 
-    // Actually, when a character is typed, it overwrites the cursor).
-}
+
 
 static void putchar(char c) {
     outb(0x3F8, c); // Write to serial port for headless debugging
