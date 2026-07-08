@@ -30,7 +30,7 @@ typedef struct {
     uint16_t high_offset;
 } __attribute__((packed)) idt_entry_t;
 
-static uint32_t* fb = 0;
+uint32_t* fb = 0;
 static uint32_t fb_width = 0;
 static uint32_t fb_height = 0;
 static uint32_t fb_pitch = 0;
