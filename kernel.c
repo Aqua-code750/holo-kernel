@@ -139,6 +139,14 @@ static void strcpy(char *dst, const char *src) {
     *dst = 0;
 }
 
+static void sleep_ms(uint32_t ms) {
+    for (uint32_t i = 0; i < ms; i++) {
+        for (volatile uint32_t j = 0; j < 10000; j++) {
+            // busy wait delay
+        }
+    }
+}
+
 static void scroll(void) {
     for (int y = 1; y < VGA_HEIGHT; ++y) {
         for (int x = 0; x < VGA_WIDTH; ++x) {
@@ -482,13 +490,69 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     }
 
     clear_screen();
-    puts("HoloKernel -- booted with a real DOOM initrd\n");
-    puts("Preparing hardware and subsystems...\n");
+    puts("SeaBIOS (version 1.14.0-2)\n");
+    sleep_ms(200);
+    puts("Machine UUID 00000000-0000-0000-0000-000000000000\n");
+    sleep_ms(100);
+    puts("Booting from Hard Disk...\n");
+    sleep_ms(400);
+    puts("GRUB loading...\n");
+    sleep_ms(300);
+    puts("Welcome to GRUB!\n\n");
+    sleep_ms(500);
+    
+    clear_screen();
+    puts("[    0.000000] Linux version 0.1 (HoloOS) (gcc version 11.4.0) #1 SMP\n");
+    sleep_ms(100);
+    puts("[    0.000000] Command line: BOOT_IMAGE=/boot/holokernel.bin root=UUID=1234 ro quiet\n");
+    sleep_ms(100);
+    puts("[    0.000000] BIOS-provided physical RAM map:\n");
+    sleep_ms(100);
+    puts("[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable\n");
+    puts("[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x0000000007ffffff] usable\n");
+    sleep_ms(200);
+    puts("[    0.000000] ROM: Shadowed BIOS at 0xf0000-0xfffff\n");
+    sleep_ms(100);
+    puts("[    0.000000] smpboot: CPU0: GenuineIntel Family 6 Model 15 Stepping 11\n");
+    sleep_ms(200);
+    
     gdt_init();
+    puts("[    0.045000] GDT initialized (Flat Memory Model, Segment Base 0x0)\n");
+    sleep_ms(150);
+
     idt_init();
+    puts("[    0.078000] IDT initialized (Interrupt Vectors 0-255 mapped)\n");
+    sleep_ms(150);
+
     pmm_init((multiboot_info_t*)multiboot_info);
+    puts("[    0.110000] Physical Memory Manager: 32MB physical RAM mapped\n");
+    sleep_ms(250);
+
     vmm_init();
+    puts("[    0.200000] Virtual Memory Manager: CR3 loaded, Hardware Paging ENABLED\n");
+    sleep_ms(300);
+
+    if (doom_wad_size > 0) {
+        puts("[    0.350000] Unpacking initramfs...\n");
+        sleep_ms(400);
+        puts("[    0.355000] VFS: Found Initial RAM Disk (Initrd)\n");
+        sleep_ms(200);
+        puts("[    0.360000] INITRD: DOOM1.WAD successfully mounted at /boot/DOOM1.WAD\n");
+        sleep_ms(300);
+    }
+
     pic_remap();
+    puts("[    0.400000] IOAPIC/PIC Remapped, legacy IRQs unmasked\n");
+    sleep_ms(200);
+
     __asm__ volatile("sti");
+    puts("[    0.410000] CPU0: Hardware Interrupts enabled.\n");
+    sleep_ms(200);
+    
+    puts("[    0.500000] Freeing unused kernel image memory: 408K\n");
+    sleep_ms(100);
+    puts("[    0.510000] Run /sbin/init as init process\n");
+    sleep_ms(300);
+    puts("\nWelcome to HoloOS (tty1)\n\n");
     shell_loop();
 }

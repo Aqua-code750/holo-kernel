@@ -59,8 +59,8 @@ void pmm_init(multiboot_info_t* mbd) {
         mmap = (multiboot_mmap_entry_t*)((uint32_t)mmap + mmap->size + sizeof(mmap->size));
     }
 
-    // Reserve first 1MB for kernel and BIOS
-    for (uint32_t i = 0; i < 0x100000; i += PMM_FRAME_SIZE) {
+    // Reserve first 16MB for kernel, BIOS, and GRUB modules (like DOOM1.WAD)
+    for (uint32_t i = 0; i < 0x1000000; i += PMM_FRAME_SIZE) {
         bitmap_set(i / PMM_FRAME_SIZE);
     }
 }

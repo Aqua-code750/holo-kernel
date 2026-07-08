@@ -15,20 +15,20 @@ void vmm_init(void) {
     if (!pd) return; // Out of memory
     vmm_memset(pd, 0, sizeof(pdirectory));
 
-    // 2. Allocate one page table to identity map the first 4MB
-    ptable* pt = (ptable*)pmm_alloc_frame();
-    if (!pt) return;
-    vmm_memset(pt, 0, sizeof(ptable));
+    // 2. Allocate and map the first 32MB of memory (8 page tables * 4MB each)
+    for (int t = 0; t < 8; t++) {
+        ptable* pt = (ptable*)pmm_alloc_frame();
+        if (!pt) return;
+        vmm_memset(pt, 0, sizeof(ptable));
 
-    // 3. Map the first 4MB of memory (1024 pages * 4KB = 4MB)
-    for (int i = 0; i < 1024; i++) {
-        pt_entry page = (i * 4096) | I86_PTE_PRESENT | I86_PTE_WRITABLE;
-        pt->m_entries[i] = page;
+        for (int i = 0; i < 1024; i++) {
+            pt_entry page = ((t * 1024 + i) * 4096) | I86_PTE_PRESENT | I86_PTE_WRITABLE;
+            pt->m_entries[i] = page;
+        }
+
+        pd_entry table = (uint32_t)pt | I86_PTE_PRESENT | I86_PTE_WRITABLE;
+        pd->m_entries[t] = table;
     }
-
-    // 4. Add the page table to the page directory
-    pd_entry table = (uint32_t)pt | I86_PTE_PRESENT | I86_PTE_WRITABLE;
-    pd->m_entries[0] = table;
 
     current_pd = pd;
 
