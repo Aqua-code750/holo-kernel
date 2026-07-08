@@ -44,6 +44,8 @@ static idt_ptr_t idt_ptr;
 
 static uint32_t doom_wad_addr = 0;
 static uint32_t doom_wad_size = 0;
+static uint32_t mb_flags = 0;
+static uint32_t mb_mods_count = 0;
 
 extern void isr0(void);
 extern void isr1(void);
@@ -139,6 +141,16 @@ static void strcpy(char *dst, const char *src) {
     *dst = 0;
 }
 
+static void init_serial() {
+    outb(0x3F8 + 1, 0x00);
+    outb(0x3F8 + 3, 0x80);
+    outb(0x3F8 + 0, 0x03);
+    outb(0x3F8 + 1, 0x00);
+    outb(0x3F8 + 3, 0x03);
+    outb(0x3F8 + 2, 0xC7);
+    outb(0x3F8 + 4, 0x0B);
+}
+
 static void sleep_ms(uint32_t ms) {
     for (uint32_t i = 0; i < ms; i++) {
         for (volatile uint32_t j = 0; j < 10000; j++) {
@@ -167,6 +179,7 @@ static void update_cursor(int x, int y) {
 }
 
 static void putchar(char c) {
+    outb(0x3F8, c); // Write to serial port for headless debugging
     if (c == '\n') {
         cursor_x = 0;
         cursor_y++;
@@ -391,6 +404,11 @@ static void handle_command(char *cmd) {
             puts("\nLaunching Doom engine... (Requires graphics driver!)\n");
         } else {
             puts("DOOM1.WAD not found in memory!\n");
+            puts("DEBUG INFO - MB Flags: ");
+            print_hex(mb_flags);
+            puts(" Mods Count: ");
+            print_hex(mb_mods_count);
+            puts("\n");
         }
     } else if (strcmp(cmd, "about") == 0) {
         puts("HoloKernel v0.1 - bootable shell with Doom WAD support\n");
@@ -487,8 +505,13 @@ static void shell_loop(void) {
 #include "vmm.h"
 
 void kernel_main(uint32_t magic, uint32_t multiboot_info) {
+    init_serial();
     (void)magic;
     multiboot_info_t* mbd = (multiboot_info_t*)multiboot_info;
+    
+    mb_flags = mbd->flags;
+    mb_mods_count = mbd->mods_count;
+
     if (mbd->flags & 0x08) {
         if (mbd->mods_count > 0) {
             multiboot_module_t* mod = (multiboot_module_t*)mbd->mods_addr;
