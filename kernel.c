@@ -490,29 +490,13 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     }
 
     clear_screen();
-    puts("SeaBIOS (version 1.14.0-2)\n");
-    sleep_ms(200);
-    puts("Machine UUID 00000000-0000-0000-0000-000000000000\n");
-    sleep_ms(100);
-    puts("Booting from Hard Disk...\n");
-    sleep_ms(400);
-    puts("GRUB loading...\n");
-    sleep_ms(300);
-    puts("Welcome to GRUB!\n\n");
-    sleep_ms(500);
-    
-    clear_screen();
-    puts("[    0.000000] Linux version 0.1 (HoloOS) (gcc version 11.4.0) #1 SMP\n");
-    sleep_ms(100);
-    puts("[    0.000000] Command line: BOOT_IMAGE=/boot/holokernel.bin root=UUID=1234 ro quiet\n");
+    puts("[    0.000000] HoloKernel version 0.1 (gcc) #1 SMP\n");
     sleep_ms(100);
     puts("[    0.000000] BIOS-provided physical RAM map:\n");
     sleep_ms(100);
     puts("[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable\n");
     puts("[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x0000000007ffffff] usable\n");
     sleep_ms(200);
-    puts("[    0.000000] ROM: Shadowed BIOS at 0xf0000-0xfffff\n");
-    sleep_ms(100);
     puts("[    0.000000] smpboot: CPU0: GenuineIntel Family 6 Model 15 Stepping 11\n");
     sleep_ms(200);
     
