@@ -170,12 +170,12 @@ static void draw_pixel(uint32_t x, uint32_t y, uint32_t color) {
 static void draw_char(uint32_t x, uint32_t y, char c, uint32_t color) {
     if (c < 0 || c > 127) c = '?';
     char* bitmap = font8x8_basic[(int)c];
-    for (int row = 0; row < 8; row++) {
+    for (int row = 0; row < 16; row++) {
         for (int col = 0; col < 8; col++) {
-            if (bitmap[row] & (1 << col)) {
+            if (bitmap[row / 2] & (1 << col)) { // Scale vertically by 2
                 draw_pixel(x + col, y + row, color);
             } else {
-                draw_pixel(x + col, y + row, 0x00000000); // Black background
+                draw_pixel(x + col, y + row, 0x00000000);
             }
         }
     }
@@ -191,19 +191,18 @@ static void draw_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t c
 
 static void scroll(void) {
     if (!fb) return;
-    // Move all pixels up by 8 rows
+    // Move all pixels up by 16 rows
     uint32_t row_bytes = fb_pitch;
-    uint32_t scroll_bytes = (fb_height - 8) * row_bytes;
+    uint32_t scroll_bytes = (fb_height - 16) * row_bytes;
     
     uint8_t* dst = (uint8_t*)fb;
-    uint8_t* src = (uint8_t*)fb + 8 * row_bytes;
+    uint8_t* src = (uint8_t*)fb + 16 * row_bytes;
     
-    // Copy memory up (we don't have memmove, so do it manually)
     for (uint32_t i = 0; i < scroll_bytes; i++) {
         dst[i] = src[i];
     }
     
-    // Clear bottom 8 rows
+    // Clear bottom 16 rows
     for (uint32_t i = scroll_bytes; i < fb_height * row_bytes; i++) {
         dst[i] = 0;
     }
@@ -215,24 +214,22 @@ static void putchar(char c) {
     outb(0x3F8, c); // Write to serial port for headless debugging
     
     if (c == '\n') {
-        // Clear old cursor block
-        draw_rect(cursor_x * 8, cursor_y * 8, 8, 8, 0x00000000);
+        draw_rect(cursor_x * 8, cursor_y * 16, 8, 16, 0x00000000);
         cursor_x = 0;
         cursor_y++;
     } else if (c == '\b') {
         if (cursor_x > 0) {
-            // Clear current cursor block
-            draw_rect(cursor_x * 8, cursor_y * 8, 8, 8, 0x00000000);
+            draw_rect(cursor_x * 8, cursor_y * 16, 8, 16, 0x00000000);
             cursor_x--;
-            draw_char(cursor_x * 8, cursor_y * 8, ' ', current_color);
+            draw_char(cursor_x * 8, cursor_y * 16, ' ', current_color);
         } else if (cursor_y > 0) {
-            draw_rect(cursor_x * 8, cursor_y * 8, 8, 8, 0x00000000);
+            draw_rect(cursor_x * 8, cursor_y * 16, 8, 16, 0x00000000);
             cursor_y--;
             cursor_x = VGA_WIDTH - 1;
-            draw_char(cursor_x * 8, cursor_y * 8, ' ', current_color);
+            draw_char(cursor_x * 8, cursor_y * 16, ' ', current_color);
         }
     } else {
-        draw_char(cursor_x * 8, cursor_y * 8, c, current_color);
+        draw_char(cursor_x * 8, cursor_y * 16, c, current_color);
         cursor_x++;
         if (cursor_x >= VGA_WIDTH) {
             cursor_x = 0;
@@ -245,8 +242,7 @@ static void putchar(char c) {
         cursor_y = VGA_HEIGHT - 1;
     }
     
-    // Draw new cursor block
-    draw_rect(cursor_x * 8, cursor_y * 8, 8, 8, 0x00555555); // Dark Gray cursor
+    draw_rect(cursor_x * 8, cursor_y * 16, 8, 16, 0x00555555); // Dark Gray cursor
 }
 
 static void puts(const char *s) {
@@ -568,9 +564,8 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
         fb_height = mbd->framebuffer_height;
         fb_pitch = mbd->framebuffer_pitch;
         fb_bpp = mbd->framebuffer_bpp;
-        
         VGA_WIDTH = fb_width / 8;
-        VGA_HEIGHT = fb_height / 8;
+        VGA_HEIGHT = fb_height / 16;
         
         // Since the framebuffer physical address could be anywhere (like 0xFD000000),
         // we can't reliably access it until paging is initialized to map it!
