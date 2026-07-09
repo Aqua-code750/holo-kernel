@@ -40,7 +40,7 @@ static int VGA_WIDTH = 0;
 static int VGA_HEIGHT = 0;
 static int cursor_x = 0;
 static int cursor_y = 0;
-static uint32_t current_color = 0x00AAAAAA; // Light Gray
+static uint32_t current_color = 0x00FFFFFF; // White
 
 static char command_buffer[128];
 static int command_len = 0;
@@ -50,8 +50,9 @@ static volatile int shift_pressed = 0;
 static idt_entry_t idt[256];
 static idt_ptr_t idt_ptr;
 
-static uint32_t doom_wad_addr = 0;
-static uint32_t doom_wad_size = 0;
+uint32_t doom_wad_addr = 0;
+uint32_t doom_wad_size = 0;
+
 static uint32_t mb_flags = 0;
 static uint32_t mb_mods_count = 0;
 
@@ -150,7 +151,7 @@ static void init_serial() {
     outb(0x3F8 + 4, 0x0B);
 }
 
-static void sleep_ms(uint32_t ms) {
+void sleep_ms(uint32_t ms) {
     for (uint32_t i = 0; i < ms; i++) {
         for (volatile uint32_t j = 0; j < 10000; j++) {
             // busy wait delay
@@ -158,7 +159,7 @@ static void sleep_ms(uint32_t ms) {
     }
 }
 
-static void draw_pixel(uint32_t x, uint32_t y, uint32_t color) {
+void draw_pixel(uint32_t x, uint32_t y, uint32_t color) {
     if (!fb || x >= fb_width || y >= fb_height) return;
     
     if (fb_bpp == 32) {
@@ -210,7 +211,7 @@ static void scroll(void) {
 
 
 
-static void putchar(char c) {
+int putchar(int c) {
     outb(0x3F8, c); // Write to serial port for headless debugging
     
     if (c == '\n') {
@@ -243,10 +244,16 @@ static void putchar(char c) {
     }
     
     draw_rect(cursor_x * 8, cursor_y * 16, 8, 16, 0x00555555); // Dark Gray cursor
+    return c;
 }
 
-static void puts(const char *s) {
-    while (*s) putchar(*s++);
+int puts(const char* data) {
+    int i = 0;
+    while (data[i]) {
+        putchar(data[i]);
+        i++;
+    }
+    return i;
 }
 
 static void print_hex(uint32_t num) {
@@ -402,7 +409,7 @@ static void keyboard_handler(void) {
     }
 }
 
-static int keyboard_read(char *out) {
+int keyboard_read(char *out) {
     int ret = 0;
     __asm__ volatile("cli");
     if (keyboard_len > 0) {
@@ -447,6 +454,14 @@ static void handle_command(char *cmd) {
             char* sig = (char*)doom_wad_addr;
             putchar(sig[0]); putchar(sig[1]); putchar(sig[2]); putchar(sig[3]);
             puts("\nLaunching Doom engine... (Requires graphics driver!)\n");
+            
+            char* args[] = {"doom", "-iwad", "DOOM1.WAD", 0};
+            extern void doomgeneric_Create(int argc, char **argv);
+            extern void doomgeneric_Tick(void);
+            doomgeneric_Create(3, args);
+            while (1) {
+                doomgeneric_Tick();
+            }
         } else {
             puts("DOOM1.WAD not found in memory!\n");
             puts("DEBUG INFO - MB Flags: ");
@@ -504,7 +519,12 @@ void isr_handler(struct regs *r) {
     (void)r;
 }
 
+volatile uint32_t timer_ticks = 0;
+
 void irq_handler(struct regs *r) {
+    if (r->int_no == 32) {
+        timer_ticks++;
+    }
     if (r->int_no == 33) {
         keyboard_handler();
     }
@@ -550,6 +570,13 @@ static void shell_loop(void) {
 #include "vmm.h"
 #include "kheap.h"
 
+void init_pit(void) {
+    uint32_t divisor = 1193180 / 1000; // 1000 Hz (1ms per tick)
+    outb(0x43, 0x36);
+    outb(0x40, (uint8_t)(divisor & 0xFF));
+    outb(0x40, (uint8_t)((divisor >> 8) & 0xFF));
+}
+
 void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     init_serial();
     (void)magic;
@@ -580,7 +607,14 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     }
 
     clear_screen();
-    puts("[    0.000000] HoloKernel version 0.1 (gcc) #1 SMP\n");
+    puts("\n");
+    puts("   _  _     _                              _      ___         \n");
+    puts("  | || |___| |___  __ _ _ _ __ _ _ __ |_|    |_ _|_ _  __ \n");
+    puts("  | __ / _ \\ | _ \\/ _` | '_/ _` | '_ \\| ' \\   | || ' \\/ _|\n");
+    puts("  |_||_\\___/_|___/\\__, |_| \\__,_| .__/|_||_| |___|_||_\\__|\n");
+    puts("                  |___/         |_|                       \n");
+    puts("                                                 (ToT)    \n");
+    puts("\n");
     sleep_ms(100);
     
     gdt_init();
@@ -632,6 +666,7 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     puts("[    0.400000] IOAPIC/PIC Remapped, legacy IRQs unmasked\n");
     sleep_ms(200);
 
+    init_pit();
     __asm__ volatile("sti");
     puts("[    0.410000] CPU0: Hardware Interrupts enabled.\n");
     sleep_ms(200);

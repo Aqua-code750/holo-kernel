@@ -1,29 +1,19 @@
 # HoloKernel
 
-HoloKernel is an experimental bootable kernel skeleton with a simple built-in shell and a user-space prototype `holoshell` that can detect and launch Doom WAD files.
+A custom, bare-metal x86 kernel designed from scratch to run Doom. 
+Developed by Holograph Inc. (ToT)
 
-Status
-- Kernel multiboot ELF build: requires a Linux toolchain (WSL or native Linux) or an i686-elf cross-toolchain on MSYS2. Building the cross-toolchain on MSYS2 is supported in this repo but can be slow.
-- User-space prototype: `user-shell/holoshell` builds and runs on Windows/MSYS2.
+## Features
+- Custom Multiboot Bootloader (GRUB)
+- Flat Memory Model (GDT)
+- Interrupt Descriptor Table (IDT) with basic ISR/IRQ handlers
+- Physical Memory Manager (PMM)
+- Virtual Memory Manager (VMM) with hardware paging
+- Kernel Heap Allocator (`kmalloc`)
+- VESA Framebuffer Graphics (VBE)
+- Custom VGA terminal emulator with 8x16 bitmap font
+- Custom Virtual File System (Initramfs / VFS) for mounting WAD files
 
-Quick actions
-
-Build user-shell (MSYS2 / Windows):
-```sh
-cd user-shell
-make
-./holoshell
-```
-
-Build kernel (recommended in WSL/Ubuntu):
-```sh
-sudo apt update
-sudo apt install build-essential gcc-multilib nasm grub-pc-bin xorriso qemu-system-x86
-cd /mnt/c/Users/kavs1/OneDrive/Desktop/holokernel
-make all
-make run
-```
-
-If you prefer MSYS2, install an `i686-elf` cross-toolchain (or build it from source) before running `make` in the project root.
-
-License: MIT
+## Doom Engine
+HoloKernel incorporates the `doomgeneric` engine port. 
+The kernel provides all standard C library functions (`malloc`, `memcpy`, `open`, `read`, etc.) and routes the `doomgeneric` framebuffer directly to the VESA graphics output, allowing DOOM to run perfectly in a bare-metal environment without an underlying operating system!
