@@ -548,6 +548,7 @@ static void shell_loop(void) {
 #include "gdt.h"
 #include "pmm.h"
 #include "vmm.h"
+#include "kheap.h"
 
 void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     init_serial();
@@ -567,9 +568,6 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
         VGA_WIDTH = fb_width / 8;
         VGA_HEIGHT = fb_height / 16;
         
-        // Since the framebuffer physical address could be anywhere (like 0xFD000000),
-        // we can't reliably access it until paging is initialized to map it!
-        // But for right now, paging is off. So we can clear it physically!
         clear_screen();
     }
 
@@ -584,50 +582,50 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     clear_screen();
     puts("[    0.000000] HoloKernel version 0.1 (gcc) #1 SMP\n");
     sleep_ms(100);
-    puts("[    0.000000] BIOS-provided physical RAM map:\n");
-    sleep_ms(100);
-    
-    // DEBUG PRINTS
-    puts("[    0.000000] MULTIBOOT DEBUG - Flags: ");
-    print_hex(mbd->flags);
-    puts(" Mods Count: ");
-    print_hex(mbd->mods_count);
-    puts("\n");
-    
-    puts("[    0.000000] MULTIBOOT DEBUG - WAD Addr: ");
-    print_hex(doom_wad_addr);
-    puts(" WAD Size: ");
-    print_hex(doom_wad_size);
-    puts("\n");
-    puts("[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable\n");
-    puts("[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x0000000007ffffff] usable\n");
-    sleep_ms(200);
-    puts("[    0.000000] smpboot: CPU0: GenuineIntel Family 6 Model 15 Stepping 11\n");
-    sleep_ms(200);
     
     gdt_init();
     puts("[    0.045000] GDT initialized (Flat Memory Model, Segment Base 0x0)\n");
-    sleep_ms(150);
+    sleep_ms(50);
 
     idt_init();
     puts("[    0.078000] IDT initialized (Interrupt Vectors 0-255 mapped)\n");
-    sleep_ms(150);
+    sleep_ms(50);
 
     pmm_init((multiboot_info_t*)multiboot_info);
     puts("[    0.110000] Physical Memory Manager: 32MB physical RAM mapped\n");
-    sleep_ms(250);
+    sleep_ms(50);
 
     vmm_init();
     puts("[    0.200000] Virtual Memory Manager: CR3 loaded, Hardware Paging ENABLED\n");
-    sleep_ms(300);
+    sleep_ms(50);
+    
+    kheap_init();
+    puts("[    0.210000] Kernel Heap Allocator: 64MB capacity initialized at 0x02000000\n");
+    sleep_ms(50);
+
+    // Kmalloc Test
+    void* ptr1 = kmalloc(1024);
+    void* ptr2 = kmalloc(2048);
+    if (ptr1 && ptr2) {
+        puts("[    0.220000] Heap Test: Allocated 1024 bytes at ");
+        print_hex((uint32_t)ptr1);
+        puts(" and 2048 bytes at ");
+        print_hex((uint32_t)ptr2);
+        puts(" [OK]\n");
+        kfree(ptr1);
+        kfree(ptr2);
+    } else {
+        puts("[    0.220000] Heap Test: Allocation [FAILED]\n");
+    }
+    sleep_ms(100);
 
     if (doom_wad_size > 0) {
         puts("[    0.350000] Unpacking initramfs...\n");
-        sleep_ms(400);
+        sleep_ms(100);
         puts("[    0.355000] VFS: Found Initial RAM Disk (Initrd)\n");
-        sleep_ms(200);
+        sleep_ms(50);
         puts("[    0.360000] INITRD: DOOM1.WAD successfully mounted at /boot/DOOM1.WAD\n");
-        sleep_ms(300);
+        sleep_ms(100);
     }
 
     pic_remap();

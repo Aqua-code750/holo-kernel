@@ -17,8 +17,8 @@ void vmm_init(void) {
     if (!pd) return; // Out of memory
     vmm_memset(pd, 0, sizeof(pdirectory));
 
-    // 2. Allocate and map the first 32MB of memory (8 page tables * 4MB each)
-    for (int t = 0; t < 8; t++) {
+    // 2. Allocate and map the first 128MB of memory (32 page tables * 4MB each)
+    for (int t = 0; t < 32; t++) {
         ptable* pt = (ptable*)pmm_alloc_frame();
         if (!pt) return;
         vmm_memset(pt, 0, sizeof(ptable));

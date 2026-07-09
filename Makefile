@@ -29,8 +29,11 @@ pmm.o: pmm.c
 vmm.o: vmm.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+kheap.o: kheap.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 # Ensure build directory exists (order-only) and link with compiler driver
-build/holokernel.bin: boot.o kernel.o interrupts.o gdt.o gdt_flush.o pmm.o vmm.o | build
+build/holokernel.bin: boot.o kernel.o interrupts.o gdt.o gdt_flush.o pmm.o vmm.o kheap.o | build
 	$(CC) $(LDFLAGS) -o $@ $^
 
 DOOM1.WAD:

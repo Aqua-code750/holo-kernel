@@ -63,6 +63,11 @@ void pmm_init(multiboot_info_t* mbd) {
     for (uint32_t i = 0; i < 0x1000000; i += PMM_FRAME_SIZE) {
         bitmap_set(i / PMM_FRAME_SIZE);
     }
+
+    // Reserve 64MB (from 32MB to 96MB) for the kernel heap (kmalloc)
+    for (uint32_t i = 0x02000000; i < 0x06000000; i += PMM_FRAME_SIZE) {
+        bitmap_set(i / PMM_FRAME_SIZE);
+    }
 }
 
 void* pmm_alloc_frame(void) {
