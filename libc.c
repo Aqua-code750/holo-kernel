@@ -168,20 +168,30 @@ int atoi(const char* str) {
     return res * sign;
 }
 
-// Formatting
-static void print_itoa(char** buf_ptr, size_t* rem, int val) {
+static void print_itoa(char** buf_ptr, size_t* rem, int val, int precision) {
     if (*rem == 0) return;
+    int is_neg = 0;
     if (val < 0) { 
-        if (*rem > 1) { **buf_ptr = '-'; (*buf_ptr)++; (*rem)--; }
+        is_neg = 1; 
         val = -val; 
     }
-    if (val == 0) { 
-        if (*rem > 1) { **buf_ptr = '0'; (*buf_ptr)++; (*rem)--; }
-        return; 
-    }
-    char tmp[16];
+    
+    char tmp[32];
     int i = 0;
-    while (val) { tmp[i++] = (val % 10) + '0'; val /= 10; }
+    if (val == 0) {
+        tmp[i++] = '0';
+    } else {
+        while (val) { tmp[i++] = (val % 10) + '0'; val /= 10; }
+    }
+    
+    while (i < precision && i < 31) {
+        tmp[i++] = '0';
+    }
+    
+    if (is_neg && i < 31) {
+        tmp[i++] = '-';
+    }
+    
     while (i > 0 && *rem > 1) {
         **buf_ptr = tmp[--i];
         (*buf_ptr)++;
@@ -222,16 +232,23 @@ int vsnprintf(char* str, size_t size, const char* format, va_list ap) {
                 pad = pad * 10 + (*format - '0');
                 format++;
             }
+            int precision = -1;
+            if (*format == '.') {
+                format++;
+                precision = 0;
+                while (*format >= '0' && *format <= '9') {
+                    precision = precision * 10 + (*format - '0');
+                    format++;
+                }
+            }
             if (*format == 'l' || *format == 'L') format++; // skip long modifier
             
             if (*format == 'd' || *format == 'i') {
                 int val = va_arg(ap, int);
-                // Ignoring padding for simplicity for now
-                print_itoa(&ptr, &rem, val);
+                print_itoa(&ptr, &rem, val, precision);
             } else if (*format == 'u') {
                 uint32_t val = va_arg(ap, uint32_t);
-                // print unsigned (treating as signed for simplicity if within 2^31)
-                print_itoa(&ptr, &rem, (int)val); 
+                print_itoa(&ptr, &rem, (int)val, precision); 
             } else if (*format == 'x' || *format == 'X') {
                 uint32_t val = va_arg(ap, uint32_t);
                 print_xtoa(&ptr, &rem, val, *format == 'X');
@@ -301,6 +318,11 @@ int vfprintf(FILE *stream, const char *format, va_list ap) {
 }
 
 int puts(const char* s); // Provided by kernel.c
+
+char* getenv(const char* name) {
+    (void)name;
+    return 0;
+}
 
 void exit(int status) {
     (void)status;
