@@ -10,6 +10,9 @@
 
 #include "font8x8_basic.h"
 
+extern void doomgeneric_Create(int argc, char **argv);
+extern void doomgeneric_Tick(void);
+
 struct regs {
     uint32_t gs, fs, es, ds;
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
@@ -607,15 +610,7 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     }
 
     clear_screen();
-    puts("\n");
-    puts("   _  _     _                              _      ___         \n");
-    puts("  | || |___| |___  __ _ _ _ __ _ _ __ |_|    |_ _|_ _  __ \n");
-    puts("  | __ / _ \\ | _ \\/ _` | '_/ _` | '_ \\| ' \\   | || ' \\/ _|\n");
-    puts("  |_||_\\___/_|___/\\__, |_| \\__,_| .__/|_||_| |___|_||_\\__|\n");
-    puts("                  |___/         |_|                       \n");
-    puts("                                                 (ToT)    \n");
-    puts("\n");
-    sleep_ms(100);
+    clear_screen();
     
     gdt_init();
     puts("[    0.045000] GDT initialized (Flat Memory Model, Segment Base 0x0)\n");
@@ -673,6 +668,7 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     
     puts("[    0.500000] Freeing unused kernel image memory: 408K\n");
     sleep_ms(100);
+    
     puts("[    0.510000] Run /sbin/init as init process\n");
     sleep_ms(300);
     puts("\nWelcome to HoloOS (tty1)\n\n");
