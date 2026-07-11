@@ -47,7 +47,7 @@ static uint32_t current_color = 0x00FFFFFF; // White
 
 static char command_buffer[128];
 static int command_len = 0;
-static volatile char keyboard_buffer[128];
+static volatile uint8_t keyboard_buffer[128];
 static volatile int keyboard_len = 0;
 static volatile int shift_pressed = 0;
 static idt_entry_t idt[256];
@@ -365,54 +365,16 @@ static void keyboard_handler(void) {
     uint8_t scancode = inb(KBD_DATA_PORT);
     if (scancode == 0x2A || scancode == 0x36) {
         shift_pressed = 1;
-        return;
-    }
-    if (scancode == 0xAA || scancode == 0xB6) {
+    } else if (scancode == 0xAA || scancode == 0xB6) {
         shift_pressed = 0;
-        return;
     }
-    if (scancode & 0x80) return;
-
-    char c = 0;
-    switch (scancode) {
-        case 0x01: c = 0; break;
-        case 0x1E: c = shift_pressed ? 'A' : 'a'; break;
-        case 0x30: c = shift_pressed ? 'B' : 'b'; break;
-        case 0x2E: c = shift_pressed ? 'C' : 'c'; break;
-        case 0x20: c = shift_pressed ? 'D' : 'd'; break;
-        case 0x12: c = shift_pressed ? 'E' : 'e'; break;
-        case 0x21: c = shift_pressed ? 'F' : 'f'; break;
-        case 0x22: c = shift_pressed ? 'G' : 'g'; break;
-        case 0x23: c = shift_pressed ? 'H' : 'h'; break;
-        case 0x17: c = shift_pressed ? 'I' : 'i'; break;
-        case 0x24: c = shift_pressed ? 'J' : 'j'; break;
-        case 0x25: c = shift_pressed ? 'K' : 'k'; break;
-        case 0x26: c = shift_pressed ? 'L' : 'l'; break;
-        case 0x32: c = shift_pressed ? 'M' : 'm'; break;
-        case 0x31: c = shift_pressed ? 'N' : 'n'; break;
-        case 0x18: c = shift_pressed ? 'O' : 'o'; break;
-        case 0x19: c = shift_pressed ? 'P' : 'p'; break;
-        case 0x10: c = shift_pressed ? 'Q' : 'q'; break;
-        case 0x13: c = shift_pressed ? 'R' : 'r'; break;
-        case 0x1F: c = shift_pressed ? 'S' : 's'; break;
-        case 0x14: c = shift_pressed ? 'T' : 't'; break;
-        case 0x16: c = shift_pressed ? 'U' : 'u'; break;
-        case 0x2F: c = shift_pressed ? 'V' : 'v'; break;
-        case 0x11: c = shift_pressed ? 'W' : 'w'; break;
-        case 0x2D: c = shift_pressed ? 'X' : 'x'; break;
-        case 0x15: c = shift_pressed ? 'Y' : 'y'; break;
-        case 0x2C: c = shift_pressed ? 'Z' : 'z'; break;
-        case 0x39: c = ' '; break;
-        case 0x0E: c = '\b'; break;
-        case 0x1C: c = '\n'; break;
-        default: return;
-    }
+    
     if (keyboard_len < 127) {
-        keyboard_buffer[keyboard_len++] = c;
+        keyboard_buffer[keyboard_len++] = scancode;
     }
 }
 
-int keyboard_read(char *out) {
+int keyboard_read(uint8_t *out) {
     int ret = 0;
     __asm__ volatile("cli");
     if (keyboard_len > 0) {
@@ -423,6 +385,42 @@ int keyboard_read(char *out) {
     }
     __asm__ volatile("sti");
     return ret;
+}
+
+char scancode_to_ascii(uint8_t scancode) {
+    if (scancode & 0x80) return 0; // Ignore releases
+    switch (scancode) {
+        case 0x1E: return shift_pressed ? 'A' : 'a';
+        case 0x30: return shift_pressed ? 'B' : 'b';
+        case 0x2E: return shift_pressed ? 'C' : 'c';
+        case 0x20: return shift_pressed ? 'D' : 'd';
+        case 0x12: return shift_pressed ? 'E' : 'e';
+        case 0x21: return shift_pressed ? 'F' : 'f';
+        case 0x22: return shift_pressed ? 'G' : 'g';
+        case 0x23: return shift_pressed ? 'H' : 'h';
+        case 0x17: return shift_pressed ? 'I' : 'i';
+        case 0x24: return shift_pressed ? 'J' : 'j';
+        case 0x25: return shift_pressed ? 'K' : 'k';
+        case 0x26: return shift_pressed ? 'L' : 'l';
+        case 0x32: return shift_pressed ? 'M' : 'm';
+        case 0x31: return shift_pressed ? 'N' : 'n';
+        case 0x18: return shift_pressed ? 'O' : 'o';
+        case 0x19: return shift_pressed ? 'P' : 'p';
+        case 0x10: return shift_pressed ? 'Q' : 'q';
+        case 0x13: return shift_pressed ? 'R' : 'r';
+        case 0x1F: return shift_pressed ? 'S' : 's';
+        case 0x14: return shift_pressed ? 'T' : 't';
+        case 0x16: return shift_pressed ? 'U' : 'u';
+        case 0x2F: return shift_pressed ? 'V' : 'v';
+        case 0x11: return shift_pressed ? 'W' : 'w';
+        case 0x2D: return shift_pressed ? 'X' : 'x';
+        case 0x15: return shift_pressed ? 'Y' : 'y';
+        case 0x2C: return shift_pressed ? 'Z' : 'z';
+        case 0x39: return ' ';
+        case 0x0E: return '\b';
+        case 0x1C: return '\n';
+        default: return 0;
+    }
 }
 
 static void print_prompt(void) {
@@ -543,10 +541,12 @@ static void shell_loop(void) {
         print_prompt();
         command_len = 0;
         while (1) {
-            char c = 0;
-            if (!keyboard_read(&c)) {
+            uint8_t scancode = 0;
+            if (!keyboard_read(&scancode)) {
                 continue;
             }
+            char c = scancode_to_ascii(scancode);
+            if (c == 0) continue;
             if (c == '\n') {
                 putchar('\n');
                 command_buffer[command_len] = 0;
