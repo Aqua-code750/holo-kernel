@@ -17,3 +17,4 @@ Developed by Holograph Inc. (ToT)
 ## Doom Engine
 HoloKernel incorporates the `doomgeneric` engine port. 
 The kernel provides all standard C library functions (`malloc`, `memcpy`, `open`, `read`, etc.) and routes the `doomgeneric` framebuffer directly to the VESA graphics output, allowing DOOM to run perfectly in a bare-metal environment without an underlying operating system!
+ Also dont forget if you wanna make an OS with it ITS TESTED FOR THIS LIKE 10 TIME IN A ROW!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
