@@ -1,0 +1,14 @@
+# Build outputs
+build/
+*.o
+*.bin
+*.iso
+*.img
+
+# user-shell binary
+/user-shell/holoshell
+
+# Editor temporary files
+*~
+.vscode/
+.DS_Store
